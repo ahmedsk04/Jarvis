@@ -11,26 +11,24 @@ app = FastAPI(title="Ahmed | AI/ML/DL Portfolio")
 # --- CORS ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],          # tighten to your domain(s) in prod
+    allow_origins=["*"],   # for prod, restrict to your domain
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # --- Static files ---
-# Expect your assets at ./static (e.g., ./static/images/myphoto.jpg)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # --- Templates ---
-# Expect your templates at ./templates (e.g., ./templates/index.html)
 templates = Jinja2Templates(directory="templates")
 
 # --- Health check (for Render) ---
 @app.get("/health", response_class=JSONResponse)
 async def health():
-    return {"ok": True, "service": "up"}
+    return {"ok": True, "service": "fastapi-portfolio"}
 
-# Optional: handle HEAD / explicitly (FastAPI usually auto-handles via GET)
+# Root HEAD support (Render does HEAD / for health check sometimes)
 @app.head("/", response_class=PlainTextResponse)
 async def root_head():
     return PlainTextResponse("", status_code=200)
@@ -48,7 +46,7 @@ async def contact(
     message: str = Form(...),
 ):
     try:
-        # TODO: validate email, send email, persist to DB, etc.
+        # Normally: validate email, send email, save to DB
         return JSONResponse(
             content={
                 "status": "success",
@@ -62,9 +60,7 @@ async def contact(
             detail="An error occurred while processing your request",
         )
 
-# --- Local dev entrypoint ---
+# --- Local development entrypoint ---
 if __name__ == "__main__":
-    # On Render, set startCommand to:
-    # uvicorn main:app --host 0.0.0.0 --port $PORT
-    port = int(os.getenv("PORT", "8000"))
-    uvicorn.run(app, host="0.0.0.0", port=port)  # no reload in production
+    port = int(os.getenv("PORT", "8000"))  # default 8000 locally, $PORT on Render
+    uvicorn.run(app, host="0.0.0.0", port=port)
