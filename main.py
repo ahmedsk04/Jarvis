@@ -8,8 +8,12 @@ import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from fastapi import FastAPI
+app = FastAPI()
 
-
+@app.get("/")
+def root():
+    return {"ok": True, "service": "up"}
 
 # import the model FastAPI app
 app = FastAPI()
