@@ -32,7 +32,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 # Hugging Face config from environment
-HF_TOKEN = os.getenv("HF_TOKEN")
+HF_TOKEN = os.getenv("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")
 MODEL_ID = (os.getenv("MODEL_ID") or "").strip()
 
 logger = logging.getLogger("uvicorn.error")
