@@ -33,7 +33,7 @@ templates = Jinja2Templates(directory="templates")
 
 # Hugging Face config from environment
 HF_TOKEN = os.getenv("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")
-MODEL_ID = (os.getenv("https://huggingface.co/uracoder/llama-8b-jarvis") or "").strip()
+MODEL_ID = (os.getenv("/uracoder/llama-8b-jarvis") or "").strip()
 
 logger = logging.getLogger("uvicorn.error")
 
