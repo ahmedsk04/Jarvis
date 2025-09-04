@@ -1,31 +1,27 @@
-// Morph Chat (zoom morph), space types in textarea, follows HTML 'dark' class
+// Morph Chat + Jarvis integration (FastAPI /generate; training format: "User: ...\nAssistant:")
 (function () {
   const DURATION = 800; // keep in sync with CSS
 
-  // Ensure portal exists
+  // ---------- Portal + Theme sync ----------
   let portal = document.querySelector('.morph-portal');
   if (!portal) {
     portal = document.createElement('div');
     portal.className = 'morph-portal';
     document.body.appendChild(portal);
   }
-
-  // Theme sync: your site uses <html class="dark"> (Tailwind darkMode:'class')
-  const htmlEl = document.documentElement; // <html> carries 'dark' class in your setup
+  const htmlEl = document.documentElement;
   function applyPortalTheme() {
-    const isDark = htmlEl.classList.contains('dark'); // dark present => dark mode
-    portal.classList.toggle('light', !isDark);        // light when 'dark' absent
+    const isDark = htmlEl.classList.contains('dark');
+    portal.classList.toggle('light', !isDark);
   }
-  // Initial + react to changes
   applyPortalTheme();
   new MutationObserver(applyPortalTheme).observe(htmlEl, { attributes: true, attributeFilter: ['class'] });
 
-  // Backdrop
+  // ---------- Backdrop + Shell ----------
   const backdrop = document.createElement('div');
   backdrop.className = 'mc-backdrop';
   portal.appendChild(backdrop);
 
-  // Launcher + dialog
   const shell = document.createElement('div');
   shell.id = 'morphChat';
   shell.role = 'button';
@@ -41,7 +37,7 @@
     </span>
     <div class="content" role="dialog" aria-modal="false" aria-label="Chat dialog">
       <div class="mc-hdr">
-        <div>Chat</div>
+        <div>Jarvis</div>
         <div class="mc-actions"><button class="mc-close" aria-label="Close">✕</button></div>
       </div>
       <div class="mc-body" id="mc-msgs"></div>
@@ -53,21 +49,51 @@
   `;
   portal.appendChild(shell);
 
-  // Refs
+  // ---------- Refs ----------
   const content = shell.querySelector('.content');
   const closeBtn = shell.querySelector('.mc-close');
   const msgs = shell.querySelector('#mc-msgs');
   const form = shell.querySelector('#mc-form');
   const input = shell.querySelector('#mc-text');
 
-  // Helpers
+  // ---------- State (history in role/content to match server) ----------
+  /** @type {{role:'user'|'assistant', content:string}[]} */
+  const history = [];
+
+  // ---------- Helpers ----------
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
   function wipeMessages() {
     msgs.style.opacity = '0';
     setTimeout(() => { msgs.innerHTML = ''; msgs.style.opacity = ''; }, 150);
+    history.length = 0;
+  }
+  function addMsg(kind, text) {
+    const el = document.createElement('div');
+    el.className = 'mc-msg ' + (kind === 'me' ? 'me' : 'bot');
+    el.innerHTML = escapeHtml(text);
+    msgs.appendChild(el);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+  function setTyping(on) {
+    const id = 'mc-typing';
+    let el = document.getElementById(id);
+    if (on) {
+      if (!el) {
+        el = document.createElement('div');
+        el.id = id;
+        el.className = 'mc-msg bot';
+        el.innerHTML = `<span class="typing-dots">typing…</span>`;
+        msgs.appendChild(el);
+        msgs.scrollTop = msgs.scrollHeight;
+      }
+    } else {
+      el && el.remove();
+    }
   }
 
   let isAnimating = false;
-
   function openChat() {
     if (isAnimating || shell.classList.contains('open')) return;
     isAnimating = true;
@@ -79,6 +105,11 @@
       setTimeout(() => { shell.classList.remove('zooming-in'); isAnimating = false; }, DURATION);
     });
     setTimeout(() => input?.focus({ preventScroll: true }), DURATION / 2);
+
+    // Welcome on first open
+    if (!msgs.querySelector('.mc-msg')) {
+      addMsg('bot', "Hi! I’m Jarvis. Ask me anything about Ahmed’s work or general AI/ML.");
+    }
   }
   function closeChat() {
     if (isAnimating || !shell.classList.contains('open')) return;
@@ -91,34 +122,29 @@
         shell.classList.remove('zooming-out');
         backdrop.classList.remove('show');
         isAnimating = false;
-        wipeMessages();
-        try { shell.focus({ preventScroll: true }); } catch(_) {}
+        // keep history/messages after close; wipe only on long press if you want
       }, DURATION);
     });
   }
 
-  // Click toggle (ignore clicks inside dialog)
+  // ---------- Interactions ----------
   shell.addEventListener('click', (e) => {
     const isOpen = shell.classList.contains('open');
-    if (isOpen && content.contains(e.target)) return;
+    if (isOpen && content.contains(e.target)) return; // clicks inside dialog do nothing
     isOpen ? closeChat() : openChat();
   });
-
-  // Keyboard (only when launcher has focus)
   shell.addEventListener('keydown', (e) => {
     const isOpen = shell.classList.contains('open');
-    if (e.target !== shell) return;          // don't interfere with textarea/input
+    if (e.target !== shell) return;
     if (e.key === 'Enter' || e.key === ' ' || e.code === 'Space') {
-      e.preventDefault();                    // prevent native "button" activation
-      if (!isOpen) openChat();               // open when closed
+      e.preventDefault();
+      if (!isOpen) openChat();
     }
   });
-
-  // Backdrop & close button
   backdrop.addEventListener('click', closeChat);
   closeBtn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); closeChat(); });
 
-  // Global keys: Esc closes; Enter submits while typing; Space in inputs untouched
+  // Global keys
   document.addEventListener('keydown', (e) => {
     const isOpen = shell.classList.contains('open');
     const inField = e.target === input || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT';
@@ -132,34 +158,62 @@
     input.style.height = Math.min(120, input.scrollHeight) + 'px';
   });
 
-  // Demo send (replace with your FastAPI / WebSocket)
-  form.addEventListener('submit', (e) => {
+  // ---------- Server call ----------
+  async function sendToServer(historyArr) {
+    // Backend /generate expects { messages: [{role, content}, ...] }
+    const res = await fetch('/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: historyArr })
+    });
+    if (!res.ok) {
+      const t = await res.text();
+      throw new Error(`HTTP ${res.status}: ${t.slice(0, 200)}`);
+    }
+    return res.json(); // {output} OR {status:"loading", estimated_time}
+  }
+
+  // ---------- Submit ----------
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const text = (input.value || '').trim();
     if (!text) return;
+
     addMsg('me', text);
+    history.push({ role: 'user', content: text });
     input.value = '';
     input.dispatchEvent(new Event('input'));
-    setTimeout(() => addMsg('bot', 'Thanks! 👌'), 300);
+
+    setTyping(true);
+    try {
+      let data = await sendToServer(history);
+
+      // Handle HF cold start (503) returning estimated_time
+      if (data && data.status === 'loading') {
+        const delay = Math.min(8000, Math.ceil((data.estimated_time || 3) * 1000));
+        await new Promise(r => setTimeout(r, delay));
+        data = await sendToServer(history);
+      }
+
+      const reply = (data && data.output) ? String(data.output) : '…';
+      setTyping(false);
+      addMsg('bot', reply);
+      history.push({ role: 'assistant', content: reply });
+    } catch (err) {
+      setTyping(false);
+      addMsg('bot', 'Error: ' + (err?.message || 'Something went wrong'));
+    }
   });
 
-  function addMsg(kind, text) {
-    const el = document.createElement('div');
-    el.className = 'mc-msg ' + (kind === 'me' ? 'me' : 'bot');
-    el.textContent = text;
-    msgs.appendChild(el);
-    msgs.scrollTop = msgs.scrollHeight;
-  }
-
-  // Public API (optional)
+  // ---------- Optional public API ----------
   window.morphChat = {
     open: openChat,
     close: closeChat,
+    clear: () => { wipeMessages(); },
     setTheme: (mode) => {
-      // force override if needed
       if (mode === 'light') { portal.classList.add('light'); return; }
       if (mode === 'dark')  { portal.classList.remove('light'); return; }
-      applyPortalTheme(); // auto from <html>.dark
+      applyPortalTheme();
     }
   };
 })();
