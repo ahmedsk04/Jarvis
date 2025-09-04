@@ -1,32 +1,58 @@
-# main.py (portfolio)
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Form, HTTPException
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-import os, json
-from typing import Optional, Dict, Any
-import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 import uvicorn
-from fastapi import FastAPI
 
-app = FastAPI()
+app = FastAPI(title="Ahmed | AI/ML/DL Portfolio")
 
-@app.get("/")
-def root():
-    return {"ok": True}
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Templates directory
+templates = Jinja2Templates(directory="templates")
+
+# Home route
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
+
+# Contact form POST
+@app.post("/contact")
+async def contact(
+    name: str = Form(...),
+    email: str = Form(...),
+    message: str = Form(...)
+):
+    try:
+        # Here you would typically add code to:
+        # 1. Validate the email format
+        # 2. Send an email
+        # 3. Store in database
+        # For now, we'll just return success if we got the data
+        return JSONResponse(
+            content={
+                "status": "success",
+                "message": "Message received successfully",
+                "data": {"name": name, "email": email}
+            }
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail="An error occurred while processing your request"
+        )
+
+# Run the application
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", "8000"))        # Render sets PORT env
-    uvicorn.run(app, host="0.0.0.0", port=port)
-
-# import the model FastAPI app
-app = FastAPI()
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
-
-@app.get("/")
-def home():
-    return FileResponse(os.path.join(BASE_DIR, "templates", "index.html"))
+    uvicorn.run(app, host="127.0.0.1", port=8000, reload=True)
