@@ -8,12 +8,18 @@ import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import uvicorn
 from fastapi import FastAPI
+
 app = FastAPI()
 
 @app.get("/")
 def root():
-    return {"ok": True, "service": "up"}
+    return {"ok": True}
+
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", "8000"))        # Render sets PORT env
+    uvicorn.run(app, host="0.0.0.0", port=port)
 
 # import the model FastAPI app
 app = FastAPI()
