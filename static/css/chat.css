@@ -1,68 +1,190 @@
 :root{
-  --chat-size:64px; --chat-right:20px; --chat-bottom:20px;
-  --open-w:min(400px,92vw); --open-h:min(640px,70vh);
-  --grad-a:#00f0ff; --grad-b:#8b5cf6;
-  --chat-bg:linear-gradient(180deg,#0b1220,#0a0f1a);
-  --chat-border:rgba(255,255,255,.08); --chat-text:#fff;
-  --bubble-me:rgba(59,130,246,.16); --bubble-me-border:rgba(59,130,246,.35); --bubble-me-text:#e8f1ff;
-  --bubble-bot:rgba(255,255,255,.06); --bubble-bot-border:rgba(255,255,255,.10); --bubble-bot-text:#fff;
-  --shadow-strong:rgba(0,0,0,.65); --shadow-medium:rgba(0,0,0,.55); --shadow-soft:rgba(139,92,246,.28);
+  /* layout */
+  --chat-size: 68px;
+  --chat-right: 22px;
+  --chat-bottom: 22px;
+  --open-w: min(380px, 88vw);
+  --open-h: min(600px, 50vh);
+  --duration: 800ms;
+
+  /* launcher gradient */
+  --grad-a: #00f0ff;
+  --grad-b: #8b5cf6;
+
+  /* default = dark */
+  --chat-bg: linear-gradient(180deg,#0b1220,#0a0f1a);
+  --chat-border: rgba(255,255,255,.08);
+  --chat-text: #fff;
+
+  --bubble-me: rgba(59,130,246,.16);
+  --bubble-me-border: rgba(59,130,246,.35);
+  --bubble-me-text: #e8f1ff;
+
+  --bubble-bot: rgba(255,255,255,.06);
+  --bubble-bot-border: rgba(255,255,255,.10);
+  --bubble-bot-text: #fff;
+
+  --hint-bg: #fff;
+  --hint-text: #001018;
+  --hint-border: rgba(0,0,0,.06);
+  --shadow-strong: rgba(0,0,0,.65);
+  --shadow-medium: rgba(0,0,0,.55);
+  --shadow-soft: rgba(139,92,246,.28);
 }
 
-.morph-portal{position:fixed;inset:0;z-index:2147483600;pointer-events:none}
-.morph-portal *{box-sizing:border-box}
-.morph-portal.light{--chat-bg:#fff;--chat-border:rgba(0,0,0,.08);--chat-text:#111;
-  --bubble-me:rgba(59,130,246,.10);--bubble-me-border:rgba(59,130,246,.25);--bubble-me-text:#0b1f44;
-  --bubble-bot:rgba(0,0,0,.05);--bubble-bot-border:rgba(0,0,0,.12);--bubble-bot-text:#111;}
+/* Light theme trigger: we set .morph-portal.light from JS */
+.morph-portal.light {
+  --chat-bg: #ffffff;
+  --chat-border: rgba(0,0,0,.08);
+  --chat-text: #111;
 
-.mc-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .24s}
-.mc-backdrop.show{opacity:1;pointer-events:auto}
+  --bubble-me: rgba(59,130,246,.10);
+  --bubble-me-border: rgba(59,130,246,.25);
+  --bubble-me-text: #0b1f44;
 
-/* GUARANTEED-VISIBLE LAUNCHER */
+  --bubble-bot: rgba(0,0,0,.05);
+  --bubble-bot-border: rgba(0,0,0,.12);
+  --bubble-bot-text: #111;
+
+  --hint-bg: #111;
+  --hint-text: #ffffff;
+  --hint-border: rgba(0,0,0,.35);
+}
+
+/* Top layer */
+.morph-portal{ position:fixed; inset:0; z-index:2147483600; pointer-events:none; }
+.morph-portal *{ box-sizing:border-box; }
+
+/* Backdrop */
+.mc-backdrop{
+  position:fixed; inset:0; background:transparent;
+  opacity:0; pointer-events:none; transition:opacity .2s ease;
+}
+.mc-backdrop.show{ opacity:1; pointer-events:auto; }
+
+/* Launcher → dialog */
 #morphChat{
-  position:fixed;right:var(--chat-right);bottom:var(--chat-bottom);
-  width:var(--chat-size);height:var(--chat-size);border-radius:999px;
-  display:grid;place-items:center;cursor:pointer;isolation:isolate;
-  pointer-events:auto; /* override portal */
-  background:radial-gradient(120% 120% at 70% 20%,var(--grad-a),var(--grad-b));
-  box-shadow:0 18px 56px var(--shadow-medium);
-  z-index:2147483601; /* above everything */
+  position:fixed; right:var(--chat-right); bottom:var(--chat-bottom);
+  width:var(--chat-size); height:var(--chat-size);
+  border-radius:999px; cursor:pointer; pointer-events:auto;
+  display:grid; place-items:center; isolation:isolate;
+  background: radial-gradient(120% 120% at 70% 20%, var(--grad-a), var(--grad-b));
+  box-shadow: 0 18px 56px var(--shadow-medium);
+  transform-origin: bottom right;
+  transition:
+    width var(--duration) cubic-bezier(.2,.9,.25,1),
+    height var(--duration) cubic-bezier(.2,.9,.25,1),
+    border-radius var(--duration) cubic-bezier(.2,.9,.25,1),
+    box-shadow var(--duration) ease;
+  outline: none;
 }
-#morphChat .iconWrap{display:grid;place-items:center;color:#fff}
-#morphChat .icon{width:24px;height:24px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.36))}
-#morphChat .hint{display:none}
 
+#morphChat .icon{ width:26px; height:26px; filter:drop-shadow(0 2px 4px rgba(0,0,0,.36)); }
+#morphChat.open .iconWrap{ opacity:0; transition:opacity .2s ease; }
+
+/* Hover hint (closed only) */
+#morphChat .hint{
+  position:absolute; right:calc(100% + 10px); bottom:50%;
+  transform: translateY(50%) translateX(6px);
+  opacity:0; pointer-events:none;
+  background: var(--hint-bg); color: var(--hint-text);
+  font:700 13px/1 system-ui; padding:8px 10px; white-space:nowrap;
+  border-radius:12px; border:1px solid var(--hint-border);
+  box-shadow:0 8px 20px rgba(0,0,0,.28);
+  transition: opacity .24s ease, transform .24s ease;
+}
+#morphChat .hint:after{
+  content:""; position:absolute; right:-6px; top:50%;
+  transform: translateY(-50%) rotate(45deg);
+  width:12px; height:12px; background: var(--hint-bg);
+  border:1px solid var(--hint-border); border-left:none; border-bottom:none;
+}
+#morphChat:not(.open):hover .hint{ opacity:1; transform: translateY(50%) translateX(0); }
+
+/* Open geometry */
+#morphChat.open{
+  width:var(--open-w); height:var(--open-h);
+  border-radius:16px; box-shadow:0 40px 120px var(--shadow-strong);
+  cursor:default;
+}
+
+/* Zoom pair */
+#morphChat.zooming-in{ transform: scale(.90); }
+#morphChat.open.zooming-in{
+  transform: scale(1);
+  transition: transform var(--duration) cubic-bezier(.2,.9,.25,1);
+}
+#morphChat.zooming-out{ transform: scale(.97); }
+#morphChat:not(.open).zooming-out{
+  transform: scale(1);
+  transition: transform var(--duration) ease;
+}
+
+/* Dialog content */
 #morphChat .content{
-  position:fixed;right:var(--chat-right);
-  bottom:calc(var(--chat-bottom) + var(--chat-size) + 12px);
-  width:var(--open-w);height:var(--open-h);
-  background:var(--chat-bg);color:var(--chat-text);
-  border:1px solid var(--chat-border);border-radius:16px;overflow:hidden;
-  box-shadow:0 30px 100px var(--shadow-strong);
-  transform:translateY(8px) scale(.96);opacity:0;pointer-events:none;
-  transition:opacity .24s, transform .24s cubic-bezier(.2,.9,.25,1);
-  display:grid;grid-template-rows:50px 1fr 64px;
+  position:absolute; inset:0; display:grid; grid-template-rows:50px 1fr 60px;
+  background: var(--chat-bg);
+  border:1px solid var(--chat-border);
+  border-radius:16px; overflow:hidden;
+  opacity:0; transform: translateY(10px) scale(.96);
+  transition: opacity var(--duration) ease,
+              transform var(--duration) cubic-bezier(.2,.9,.25,1);
+  pointer-events:none; color: var(--chat-text);
 }
-#morphChat.open .content{opacity:1;transform:none;pointer-events:auto}
+#morphChat.open .content{ opacity:1; transform:none; pointer-events:auto; }
 
-/* header/body/input */
-.mc-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--chat-border);font:800 14px system-ui}
-.mc-actions button{background:none;border:0;color:inherit;opacity:.9;cursor:pointer;font-size:18px}
-.mc-actions button:hover{opacity:1}
+/* Header */
+.mc-hdr{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 12px; border-bottom:1px solid var(--chat-border);
+  font:800 14px system-ui;
+}
+.mc-actions button{
+  background:none; border:0; color:inherit; opacity:.9;
+  cursor:pointer; font-size:18px;
+}
+.mc-actions button:hover{ opacity:1; }
 
-.mc-body{padding:12px;overflow:auto;scrollbar-width:thin;scrollbar-color:rgba(127,127,127,.25) transparent}
-.mc-msg{max-width:78%;margin:6px 0;display:flex;font:500 14px/1.45 system-ui}
-.mc-msg .bubble{padding:10px 12px;border-radius:12px;border:1px solid transparent}
-.mc-msg.me{justify-content:flex-end}.mc-msg.me .bubble{background:var(--bubble-me);border-color:var(--bubble-me-border);color:var(--bubble-me-text)}
-.mc-msg.bot{justify-content:flex-start}.mc-msg.bot .bubble{background:var(--bubble-bot);border-color:var(--bubble-bot-border);color:var(--bubble-bot-text)}
+/* Messages */
+.mc-body{ padding:12px; overflow:auto; }
+.mc-msg{ max-width:78%; margin:6px 0; padding:10px 12px; border-radius:12px; font:500 14px/1.35 system-ui; }
+.mc-msg.me{
+  margin-left:auto; background: var(--bubble-me);
+  border:1px solid var(--bubble-me-border); color: var(--bubble-me-text);
+}
+.mc-msg.bot{
+  margin-right:auto; background: var(--bubble-bot);
+  border:1px solid var(--bubble-bot-border); color: var(--bubble-bot-text);
+}
 
-.mc-input{display:flex;gap:8px;align-items:end;padding:10px;border-top:1px solid var(--chat-border)}
-.mc-input textarea{flex:1;min-height:44px;max-height:140px;resize:vertical;padding:10px 12px;border-radius:10px;outline:none;border:1px solid rgba(127,127,127,.16);background:rgba(15,23,42,.08);color:inherit}
-.morph-portal.light .mc-input textarea{background:rgba(0,0,0,.04)}
-.mc-input textarea:focus{border-color:rgba(59,130,246,.45);box-shadow:0 0 0 3px rgba(59,130,246,.18)}
-.mc-send{min-width:92px;height:44px;border-radius:10px;border:0;cursor:pointer;background:radial-gradient(120% 120% at 70% 20%,var(--grad-a) 0%,var(--grad-b) 85%);color:#001018;font:800 14px system-ui;box-shadow:0 8px 18px var(--shadow-soft)}
+/* Input area */
+.mc-input{
+  display:flex; gap:8px; align-items:end;
+  padding:10px; border-top:1px solid var(--chat-border);
+}
+.mc-input textarea{
+  flex:1; min-height:44px; max-height:120px; resize:vertical;
+  padding:10px 12px; border-radius:10px; outline:none;
+  border:1px solid rgba(127,127,127,.16);
+  background: rgba(15,23,42,.08);
+  color: inherit;
+}
+.mc-input textarea::placeholder{ color: rgba(127,127,127,.7); }
+.mc-input textarea:focus{
+  border-color: rgba(59,130,246,.45);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.18);
+}
+.mc-send{
+  min-width:84px; height:44px; border-radius:10px; border:0; cursor:pointer;
+  background: radial-gradient(120% 120% at 70% 20%, var(--grad-a) 0%, var(--grad-b) 85%);
+  color:#001018; font:800 14px system-ui; box-shadow:0 8px 18px var(--shadow-soft);
+}
 
+/* Mobile */
 @media (max-width:520px){
-  :root{--chat-size:58px;--chat-right:14px;--chat-bottom:14px}
-  #morphChat .content{right:12px;width:calc(100vw - 24px);height:min(620px,65vh)}
+  #morphChat.open{
+    width: calc(100vw - 24px);
+    height: min(600px, 55vh);
+    right:12px; left:12px;
+  }
 }
