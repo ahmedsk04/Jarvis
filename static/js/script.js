@@ -200,26 +200,26 @@ CONTENT.projects.forEach(p => {
 });
 
 // ----- Timeline -----
-const timeline = document.getElementById("timeline-wrap");
-CONTENT.timeline.forEach(item => {
-  const box = document.createElement("div");
-  box.className = "relative pl-8 reveal";
-  box.innerHTML = `
-    <div class="timeline-line"></div>
-    <div class="timeline-dot"></div>
-    <div class="glass p-5">
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <div class="text-zinc-900 dark:text-white">
-          <div class="text-sm uppercase tracking-wider text-zinc-600 dark:text-white/60">${item.date}</div>
-          <div class="mt-1 text-lg font-semibold">${item.title}</div>
-          <div class="text-zinc-700 dark:text-white/70">${item.org}</div>
-        </div>
-      </div>
-      <p class="mt-3 text-zinc-700 dark:text-white/70">${item.desc}</p>
-    </div>
-  `;
-  timeline.appendChild(box);
-});
+// const timeline = document.getElementById("timeline-wrap");
+// CONTENT.timeline.forEach(item => {
+//   const box = document.createElement("div");
+//   box.className = "relative pl-8 reveal";
+//   box.innerHTML = `
+//     <div class="timeline-line"></div>
+//     <div class="timeline-dot"></div>
+//     <div class="glass p-5">
+//       <div class="flex flex-wrap items-center justify-between gap-2">
+//         <div class="text-zinc-900 dark:text-white">
+//           <div class="text-sm uppercase tracking-wider text-zinc-600 dark:text-white/60">${item.date}</div>
+//           <div class="mt-1 text-lg font-semibold">${item.title}</div>
+//           <div class="text-zinc-700 dark:text-white/70">${item.org}</div>
+//         </div>
+//       </div>
+//       <p class="mt-3 text-zinc-700 dark:text-white/70">${item.desc}</p>
+//     </div>
+//   `;
+//   timeline.appendChild(box);
+// });
 
 // ----- Blog -----
 const postsGrid = document.getElementById("posts-grid");
